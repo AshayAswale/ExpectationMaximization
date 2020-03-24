@@ -24,7 +24,7 @@ def main(argv):
 
 def kMeans(points, n_clust):
     # # Delete when done
-    # N = 5
+    # N = 10
     # points = np.random.rand(N, 2)
 
     points_dimension = len(points[0])
@@ -44,16 +44,21 @@ def kMeans(points, n_clust):
     while elapsed_time < 10:
         distances = getDistancesArray(points, centroids)
         assignClusters(points, distances)
-        redefineCentroids(points, centroids)
+        centroids = redefineCentroids(points, centroids)
         elapsed_time = time.time() - start_time
     plotPoints(points)
 
 
 def redefineCentroids(points, centroids):
-    centroids = np.zeros((len(centroids), len(centroids[0])))
+    centroids_reform = np.zeros((len(centroids), len(centroids[0])+1))
     for point in points:
-        for i in range(len(centroids[0])):
-            centroids[int(point[-1])][i] += point[i]
+        for i in range(len(centroids_reform[0])):
+            centroids_reform[int(point[-1])][i] += point[i]
+        centroids_reform[int(point[-1])][-1] += 1
+    for point in centroids_reform:
+        if point[-1] != 0:
+            point[:-1] /= point[-1]
+    return centroids_reform[:, :-1]
 
 
 def assignClusters(points, distances):
