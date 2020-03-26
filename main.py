@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import random
 from numpy import genfromtxt
+from scipy.spatial import distance
 from matplotlib import pyplot
 import time
 
@@ -24,8 +25,8 @@ def main(argv):
 
 def kMeans(points, n_clust):
     # # Delete when done
-    # N = 10
-    # points = np.random.rand(N, 2)
+    N = 5
+    points = np.random.rand(N, 2)
 
     points_dimension = len(points[0])
     centroids = np.zeros((n_clust, points_dimension))
@@ -41,11 +42,14 @@ def kMeans(points, n_clust):
     # plotPoints(points)
     start_time = time.time()
     elapsed_time = time.time() - start_time
-    while elapsed_time < 10:
+    # i = 0
+    # while i < 100:
+    while elapsed_time < 3:
         distances = getDistancesArray(points, centroids)
         assignClusters(points, distances)
         centroids = redefineCentroids(points, centroids)
         elapsed_time = time.time() - start_time
+        # i += 1
     plotPoints(points)
 
 
@@ -76,9 +80,10 @@ def getDistancesArray(points, centroids):
 
 def getDistance(point, centroid):
     sum = 0
-    for i in range(len(centroid)):
-        sum += abs(point[i] - centroid[i])
-    return sum
+    # for i in range(len(centroid)):
+    #     sum += abs(point[i] - centroid[i])
+    # return sum
+    return distance.euclidean(point[0:-1], centroid)
 
 
 if __name__ == "__main__":
