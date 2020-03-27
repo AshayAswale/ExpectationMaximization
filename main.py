@@ -4,7 +4,8 @@ import numpy as np
 import random
 from numpy import genfromtxt
 from scipy.spatial import distance
-from matplotlib import pyplot
+# from matplotlib import pyplot
+import math
 import time
 
 
@@ -20,70 +21,83 @@ def plotPoints(points):
 def main(argv):
     points = genfromtxt(argv[0], delimiter=",")
     clusterData(points)
-    kMeans(points, int(argv[1]))
-
-
-def kMeans(points, n_clust):
     # # Delete when done
-    N = 5
+    N = 4
     points = np.random.rand(N, 2)
+    solve(points, 2)
+    # solve(points, int(argv[1]))
 
+
+def solve(points, n_clust):
     points_dimension = len(points[0])
-    centroids = np.zeros((n_clust, points_dimension))
-
-    for i in range(n_clust):
-        centroids[i] = random.choice(points)
 
     # Append a row of zeros.
     temp = np.zeros((len(points), points_dimension + 1))
     temp[:, :-1] = points
     points = temp
 
-    # plotPoints(points)
+    # Centroid with n-dimention and variance
+    centroids = np.zeros((n_clust, points_dimension + 1))
+    for i in range(n_clust):
+        centroids[i] = random.choice(points)
+
+    # Standard Deviation,
+    centroids[:, -1] = 0.2
+    expectationMaximisation(points, centroids)
+
+
+def expectationMaximisation(points, centroids):
+    # HARDCODING FUCK
+    p_centroid = [0.2, 0.4, 0.4]
     start_time = time.time()
     elapsed_time = time.time() - start_time
-    # i = 0
-    # while i < 100:
-    while elapsed_time < 3:
-        distances = getDistancesArray(points, centroids)
-        assignClusters(points, distances)
-        centroids = redefineCentroids(points, centroids)
-        elapsed_time = time.time() - start_time
-        # i += 1
-    plotPoints(points)
+    while elapsed_time < 10:
+        p_x_cl_arr = getGaussianProbArray(points, centroids)
+        cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
+        updateMean(points, cl_i_array, centroids)
+        updateSD(points, cl_i_array, centroids)
+        i = 0
 
 
-def redefineCentroids(points, centroids):
-    centroids_reform = np.zeros((len(centroids), len(centroids[0])+1))
-    for point in points:
-        for i in range(len(centroids_reform[0])):
-            centroids_reform[int(point[-1])][i] += point[i]
-        centroids_reform[int(point[-1])][-1] += 1
-    for point in centroids_reform:
-        if point[-1] != 0:
-            point[:-1] /= point[-1]
-    return centroids_reform[:, :-1]
+def updateMean(points, cl_i_array, centroids):
+    for i in range(len(centroids)):
+        sum = 0
+        temp = np.zeros((len(centroids[0])-1))
+        for j in range(len(points)):
+            sum += cl_i_array[j, i]
+            for k in range(len(points[0])-1):
+                temp[k] += cl_i_array[j, i] * points[j, k]
+        centroids[i, :-1] = temp/sum
 
 
-def assignClusters(points, distances):
-    for i in range(len(points)):
-        points[i, -1] = np.argmin(distances[i])
+def getProbOfBelonging(p_x_cl_arr, p_centroid):
+    for point in p_x_cl_arr:
+        sum = 0
+        for i in range(len(point)):
+            sum += point[i] * p_centroid[i]
+            point[i] *= p_centroid[i]
+        point[:] /= sum
+
+    return p_x_cl_arr
 
 
-def getDistancesArray(points, centroids):
-    distances = np.zeros((len(points), len(centroids)))
+def getGaussianProbArray(points, centroids):
+    probabilities = np.zeros((len(points), len(centroids)))
     for i in range(len(points)):
         for j in range(len(centroids)):
-            distances[i, j] = getDistance(points[i], centroids[j])
-    return distances
+            probabilities[i, j] = getGaussianProb(points[i], centroids[j])
+    return probabilities
+
+
+def getGaussianProb(point, centroid):
+    denom = (1 / (((2 * math.pi) ** 0.5)*centroid[-1]))
+    expon = -((getDistance(point[:-1], centroid[:-1])
+               ** 2)) / (2 * (centroid[-1] ** 2))
+    return math.exp(expon)*denom
 
 
 def getDistance(point, centroid):
-    sum = 0
-    # for i in range(len(centroid)):
-    #     sum += abs(point[i] - centroid[i])
-    # return sum
-    return distance.euclidean(point[0:-1], centroid)
+    return distance.euclidean(point, centroid)
 
 
 if __name__ == "__main__":
