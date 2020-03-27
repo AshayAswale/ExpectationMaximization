@@ -22,10 +22,10 @@ def main(argv):
     points = genfromtxt(argv[0], delimiter=",")
     clusterData(points)
     # # Delete when done
-    N = 100
-    points = np.random.rand(N, 2)
-    solve(points, 3)
-    # solve(points, int(argv[1]))
+    # N = 100
+    # points = np.random.rand(N, 2)
+    # solve(points, 3)
+    solve(points, int(argv[1]))
 
 
 def solve(points, n_clust):
@@ -37,27 +37,29 @@ def solve(points, n_clust):
     points = temp
 
     # Centroid with n-dimention and variance
+    # centroids[ith centroid][x-cord, y-cord, std devn]
     centroids = np.zeros((n_clust, points_dimension + 1))
-    for i in range(n_clust):
-        centroids[i] = random.choice(points)
+    centroids = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
 
-    # Standard Deviation,
-    centroids[:, -1] = 0.2
     expectationMaximisation(points, centroids)
 
 
 def expectationMaximisation(points, centroids):
-    # HARDCODING FUCK
-    p_centroid = [0.2, 0.4, 0.4]
+    p_centroid = np.full((len(centroids)), 1/(len(centroids)))
     start_time = time.time()
     elapsed_time = time.time() - start_time
+    i = 0
     while elapsed_time < 10:
+        # while i < 100:
         p_x_cl_arr = getGaussianProbArray(points, centroids)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
-        assignClusters(cl_i_array, points)
         updateCentroids(points, cl_i_array, centroids)
         elapsed_time = time.time() - start_time
+        i += 1
+    assignClusters(cl_i_array, points)
     plotPoints(points)
+    print(i)
+    print(centroids)
 
 
 def assignClusters(cl_i_array, points):
