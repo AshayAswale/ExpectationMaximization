@@ -39,7 +39,10 @@ def solve(points, n_clust):
     # Centroid with n-dimention and variance
     # centroids[ith centroid][x-cord, y-cord, std devn]
     centroids = np.zeros((n_clust, points_dimension + 1))
-    centroids = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
+    for i in range(n_clust):
+        centroids[i] = random.choice(points)
+    centroids[:, -1] = 2
+    # centroids = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
 
     expectationMaximisation(points, centroids)
 
