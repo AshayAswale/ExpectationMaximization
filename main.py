@@ -4,7 +4,7 @@ import numpy as np
 import random
 from numpy import genfromtxt
 from scipy.spatial import distance
-# from matplotlib import pyplot
+from matplotlib import pyplot
 import math
 import time
 
@@ -22,9 +22,9 @@ def main(argv):
     points = genfromtxt(argv[0], delimiter=",")
     clusterData(points)
     # # Delete when done
-    N = 4
+    N = 100
     points = np.random.rand(N, 2)
-    solve(points, 2)
+    solve(points, 3)
     # solve(points, int(argv[1]))
 
 
@@ -54,20 +54,30 @@ def expectationMaximisation(points, centroids):
     while elapsed_time < 10:
         p_x_cl_arr = getGaussianProbArray(points, centroids)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
-        updateMean(points, cl_i_array, centroids)
-        updateSD(points, cl_i_array, centroids)
-        i = 0
+        assignClusters(cl_i_array, points)
+        updateCentroids(points, cl_i_array, centroids)
+        elapsed_time = time.time() - start_time
+    plotPoints(points)
 
 
-def updateMean(points, cl_i_array, centroids):
+def assignClusters(cl_i_array, points):
+    for i in range(len(cl_i_array)):
+        points[i, -1] = np.argmax(cl_i_array[i])
+
+
+def updateCentroids(points, cl_i_array, centroids):
     for i in range(len(centroids)):
         sum = 0
-        temp = np.zeros((len(centroids[0])-1))
+        mean = np.zeros((len(centroids[0]) - 1))
+        variance = 0
         for j in range(len(points)):
             sum += cl_i_array[j, i]
             for k in range(len(points[0])-1):
-                temp[k] += cl_i_array[j, i] * points[j, k]
-        centroids[i, :-1] = temp/sum
+                mean[k] += cl_i_array[j, i] * points[j, k]
+            variance += (cl_i_array[j, i] *
+                         ((getDistance(points[j, :-1], centroids[i, :-1]))**2))
+        centroids[i, :-1] = mean / sum
+        centroids[i, -1] = (variance/sum)**0.5
 
 
 def getProbOfBelonging(p_x_cl_arr, p_centroid):
