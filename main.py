@@ -2,6 +2,7 @@ import csv
 import sys
 import numpy as np
 import random
+from copy import deepcopy
 from numpy import genfromtxt
 from scipy.spatial import distance
 from matplotlib import pyplot
@@ -9,23 +10,27 @@ import math
 import time
 
 
-def clusterData(points):
-    return points
-
-
-def plotPoints(points):
-    pyplot.scatter(points[:, 0], points[:, 1], c=points[:, 2])
-    pyplot.show()
+def plotPoints(points, centroids, init_centroids, num=1):
+    pyplot.scatter(points[:, 0], points[:, 1], c=points[:, 2], s=2)
+    for i in range(len(centroids)):
+        pyplot.scatter(centroids[i, 0], centroids[i, 1], c=i, marker="*", s=90)
+        # pyplot.scatter(init_centroids[i, 0], init_centroids[i, 1], c=4)
+    # pyplot.show()
+    name = 'EM_animation_2/books_read_'
+    save_name = name + str(num) + '.png'
+    print(save_name)
+    pyplot.savefig(save_name)
+    pyplot.close()
 
 
 def main(argv):
     points = genfromtxt(argv[0], delimiter=",")
-    clusterData(points)
-    # # Delete when done
-    # N = 100
-    # points = np.random.rand(N, 2)
-    # solve(points, 3)
     solve(points, int(argv[1]))
+
+    # # # Delete when done
+    # N = 100
+    # points = np.random.rand(N, 1)
+    # solve(points, 1)
 
 
 def solve(points, n_clust):
@@ -41,26 +46,29 @@ def solve(points, n_clust):
     centroids = np.zeros((n_clust, points_dimension + 1))
     for i in range(n_clust):
         centroids[i] = random.choice(points)
-    centroids[:, -1] = 2
+    centroids[:, -1] = 3
+
     # centroids = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
 
     expectationMaximisation(points, centroids)
 
 
 def expectationMaximisation(points, centroids):
-    p_centroid = np.full((len(centroids)), 1/(len(centroids)))
+    p_centroid = np.full((len(centroids)), 1 / (len(centroids)))
+    init_centroids = deepcopy(centroids)
     start_time = time.time()
     elapsed_time = time.time() - start_time
     i = 0
     while elapsed_time < 10:
-        # while i < 100:
+        # while i < 20:
         p_x_cl_arr = getGaussianProbArray(points, centroids)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
         updateCentroids(points, cl_i_array, centroids)
         elapsed_time = time.time() - start_time
         i += 1
-    assignClusters(cl_i_array, points)
-    plotPoints(points)
+        assignClusters(cl_i_array, points)
+        print(i)
+        plotPoints(points, centroids, init_centroids, i)
     print(i)
     print(centroids)
 
