@@ -39,12 +39,13 @@ def main(argv):
     temp[:, :-1] = points
     points = temp
 
+    # If the given number of clusters is zero, then get optimum clusters
     n_clust = int(argv[1])
     if n_clust is not 0:
         runtime = 10
         bic, ll, mean, variance = solve(points, n_clust, runtime)
     else:
-        # Time
+        # Each iteration will get equal time, total accounting to 10 seconds
         runtime = 10 / (clusts_list[-1] - clusts_list[0] + 1)
         best_bic = math.inf
         n_clust = 0
@@ -54,10 +55,12 @@ def main(argv):
             if bic < best_bic:
                 best_bic = bic
                 ll = ll_curr
-                mean = mean_curr
-                variance = variance_curr
+                mean = deepcopy(mean_curr)
+                variance = deepcopy(variance_curr)
                 best_points = deepcopy(points)
                 n_clust = i
+
+    # Printing Results
     print("############################################")
     print("Number of clusters:", n_clust)
     print("\nMeans:\n", mean)
@@ -93,21 +96,23 @@ def solve(points, n_clust, runtime):
         for i in range(n_clust):
             means[i] = random.choice(points[:, :-1])
 
-        # Should be random symmetric matrix
         covariances.fill(0)
         for i in range(n_clust):
             covariances[i] = np.identity(points_dimension)
 
-        # means = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
+        #### Calling EM Algorithm ####
         new_ll = expectationMaximisation(
             points, means, covariances, runtime)
-        elapsed_time = time.time() - solve.start_time
+
+        # Updating the best values if necessary
         if new_ll > best_ll:
             best_clusters = deepcopy(points)
             best_means = deepcopy(means)
             best_covariance = deepcopy(covariances)
-            # print("Best Updated from ", best_ll, " to ", new_ll)
             best_ll = new_ll
+
+        # Keeping Track of time
+        elapsed_time = time.time() - solve.start_time
         solve.counter += 1
     # plotPoints(best_clusters, best_means)
     return getBIC(len(points), len(means), best_ll), best_ll, best_means, best_covariance
@@ -117,24 +122,35 @@ def getBIC(N, K, best_ll):
     return K*math.log(N)-2*best_ll
 
 
+#################################################################
+######## E X P E C T A T I O N   M A X I M A S A T I O N ########
+#################################################################
+
 def expectationMaximisation(points, means, covariances, runtime):
     p_centroid = np.full((len(means)), 1 / (len(means)))
     elapsed_time = time.time() - solve.start_time
     prev_ll = math.inf
     curr_ll = 0
-    # print("############")
+
+    # Terminate if time has elapsed, or the LL is not changing beyond threshold
     while elapsed_time < runtime and abs(curr_ll - prev_ll) > solve.threshold:
         prev_ll = curr_ll
+
+        # Get Gaussian
         p_x_cl_arr, curr_ll = getGaussianProbArray(
             points, means, covariances, p_centroid)
-        # print(curr_ll)
+
+        # Normalize the probability
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
+
+        # Assigning clustes
         assignClusters(cl_i_array, points)
+
+        # Updating the Cluster Centers
         updateCentroids(points, means, covariances)
+
+        # Keeping track of time
         elapsed_time = time.time() - solve.start_time
-        # solve.counter += 1
-        # plotPoints(points, means)
-    # print(means)
     return curr_ll
 
 
@@ -158,7 +174,7 @@ def updateCentroids(points, means, covariances):
     sums = np.zeros(len(means))
     loc_means = deepcopy(means)
     means.fill(0)
-    # covariances.fill(0)
+    covariances.fill(0)
     for i in range(len(points)):
         cluster = int(points[i, -1])
         sums[cluster] += 1
