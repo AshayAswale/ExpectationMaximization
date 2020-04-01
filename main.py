@@ -6,7 +6,7 @@ from copy import deepcopy
 from numpy import genfromtxt
 from scipy import linalg
 # from scipy.spatial import distance
-from matplotlib import pyplot
+# from matplotlib import pyplot
 import math
 import time
 
@@ -29,29 +29,63 @@ plotPoints.counter = 0
 
 def main(argv):
     points = genfromtxt(argv[0], delimiter=",")
-    solve(points, int(argv[1]))
 
-    # # # Delete when done
-    # N = 100
-    # points = np.random.rand(N, 1)
-    # solve(points, 1)
+    # If the n_clust is 0, range of clusters to be checked
+    clusts_list = [2, 4]
 
-
-def solve(points, n_clust):
+    # Appending a column of zeros for cluster assigning
     points_dimension = len(points[0])
-    # Append a row of zeros.
     temp = np.zeros((len(points), points_dimension + 1))
     temp[:, :-1] = points
     points = temp
-    solve.start_time = time.time()
-    solve.threshold = 10
-    elapsed_time = time.time() - solve.start_time
-    best_clusters = deepcopy(points)
+
+    n_clust = int(argv[1])
+    if n_clust is not 0:
+        runtime = 10
+        bic, ll, mean, variance = solve(points, n_clust, runtime)
+    else:
+        # Time
+        runtime = 10 / (clusts_list[-1] - clusts_list[0] + 1)
+        best_bic = math.inf
+        n_clust = 0
+        best_points = deepcopy(points)
+        for i in range(clusts_list[0], clusts_list[-1]+1):
+            bic, ll_curr, mean_curr, variance_curr = solve(points, i, runtime)
+            if bic < best_bic:
+                best_bic = bic
+                ll = ll_curr
+                mean = mean_curr
+                variance = variance_curr
+                best_points = deepcopy(points)
+                n_clust = i
+    print("############################################")
+    print("Number of clusters:", n_clust)
+    print("\nMeans:\n", mean)
+    print("\nCovariance:\n", variance)
+    print("\nLog-likelihood:\n", ll)
+    print("############################################")
+
+
+def solve(points, n_clust, runtime):
+    # Initializing arrays
+    points_dimension = len(points[0])-1
     means = np.zeros((n_clust, points_dimension))
     covariances = np.zeros((n_clust, points_dimension, points_dimension))
+
+    # Best values of runs
+    best_clusters = deepcopy(points)
     best_means = deepcopy(means)
     best_ll = -math.inf
-    while elapsed_time < 10:
+
+    # Time
+    solve.start_time = time.time()
+    elapsed_time = time.time() - solve.start_time
+
+    # Likelihood stopping threshold
+    solve.threshold = 10
+    solve.counter = 0
+
+    while elapsed_time < runtime:
 
         # Centroid with n-dimention and variance
         # means[ith centroid][x-cord, y-cord, std devn]
@@ -66,34 +100,41 @@ def solve(points, n_clust):
 
         # means = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
         new_ll = expectationMaximisation(
-            points, means, covariances)
+            points, means, covariances, runtime)
         elapsed_time = time.time() - solve.start_time
         if new_ll > best_ll:
             best_clusters = deepcopy(points)
             best_means = deepcopy(means)
-            print("Best Updated from ", best_ll, " to ", new_ll)
+            best_covariance = deepcopy(covariances)
+            # print("Best Updated from ", best_ll, " to ", new_ll)
             best_ll = new_ll
-    plotPoints(best_clusters, best_means)
-    print("Best LL:", best_ll)
+        solve.counter += 1
+    # plotPoints(best_clusters, best_means)
+    return getBIC(len(points), len(means), best_ll), best_ll, best_means, best_covariance
 
 
-def expectationMaximisation(points, means, covariances):
+def getBIC(N, K, best_ll):
+    return K*math.log(N)-2*best_ll
+
+
+def expectationMaximisation(points, means, covariances, runtime):
     p_centroid = np.full((len(means)), 1 / (len(means)))
     elapsed_time = time.time() - solve.start_time
     prev_ll = math.inf
     curr_ll = 0
-    print("############")
-    while elapsed_time < 10 and abs(curr_ll - prev_ll) > solve.threshold:
+    # print("############")
+    while elapsed_time < runtime and abs(curr_ll - prev_ll) > solve.threshold:
         prev_ll = curr_ll
         p_x_cl_arr, curr_ll = getGaussianProbArray(
             points, means, covariances, p_centroid)
-        print(curr_ll)
+        # print(curr_ll)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
         assignClusters(cl_i_array, points)
         updateCentroids(points, means, covariances)
         elapsed_time = time.time() - solve.start_time
-        plotPoints(points, means)
-    print(means)
+        # solve.counter += 1
+        # plotPoints(points, means)
+    # print(means)
     return curr_ll
 
 
