@@ -15,7 +15,7 @@ def plotPoints(points, means, init_centroids, num=1):
     pyplot.scatter(points[:, 0], points[:, 1], c=points[:, 2], s=2)
     for i in range(len(means)):
         pyplot.scatter(means[i, 0], means[i, 1], c=i, marker="*", s=90)
-        # pyplot.scatter(init_centroids[i, 0], init_centroids[i, 1], c=4)
+        pyplot.scatter(init_centroids[i, 0], init_centroids[i, 1], c=4)
     # pyplot.show()
     name = 'EM_animation_3/books_read_'
     save_name = name + str(num) + '.png'
@@ -66,17 +66,30 @@ def expectationMaximisation(points, means, covariances):
     i = 0
     # while elapsed_time < 10:
     while i < 10:
+        likelihood = getLikelihood(points, means, covariances, p_centroid)
+        print(likelihood)
         p_x_cl_arr = getGaussianProbArray(points, means, covariances)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
         assignClusters(cl_i_array, points)
-        print(cl_i_array)
+        # print(cl_i_array)
         updateCentroids(points, means, covariances)
         elapsed_time = time.time() - start_time
         i += 1
-        print(i)
+        # print(i)
         plotPoints(points, means, init_centroids, i)
     print(i)
     print(means)
+
+
+def getLikelihood(points, means, covariances, p_centroid):
+    likelihood = 0
+    for i in range(len(points)):
+        temp = 0
+        for j in range(len(means)):
+            temp += (p_centroid[j]) * getGaussianProb(
+                points[i], means[j], covariances[j])
+        likelihood += np.log(temp)
+    return likelihood
 
 
 def assignClusters(cl_i_array, points):
@@ -88,18 +101,19 @@ def updateCentroids(points, means, covariances):
     sums = np.zeros(len(means))
     loc_means = deepcopy(means)
     means.fill(0)
-    covariances.fill(0)
+    # covariances.fill(0)
     for i in range(len(points)):
         cluster = int(points[i, -1])
         sums[cluster] += 1
         means[cluster] += points[i, :-1]
-        # covariances[cluster] += np.dot(np.atleast_2d(points[i, :-1] - loc_means[i]).T, (points[i, :-1] -loc_means[i]))
+        # covariances[cluster] += np.dot(np.atleast_2d(
+        #     points[i, :-1] - loc_means[i]).T, (points[i, :-1] - loc_means[i]))
         diff = np.atleast_2d(points[i, :-1] - loc_means[cluster])
         covariances[cluster] += np.dot(diff.T, diff)
 
     for i in range(len(means)):
         means[i] /= sums[i]
-        covariances /= sums[i]
+        covariances[i] /= sums[i]
 
     i = 0
 
@@ -110,7 +124,10 @@ def getProbOfBelonging(p_x_cl_arr, p_centroid):
         for i in range(len(point)):
             sum += point[i] * p_centroid[i]
             point[i] *= p_centroid[i]
-        point[:] /= sum
+        if sum == 0.0:
+            point[:] = 1/len(p_centroid)
+        else:
+            point[:] /= sum
     return p_x_cl_arr
 
 
@@ -127,10 +144,12 @@ def getGaussianProb(point, centroid, covariance):
     dimention = len(centroid)
     denom = (1 / (((2 * math.pi) ** (dimention / 2))
                   * (abs(np.linalg.det(covariance)) ** 0.5)))
-    expon = -1/2*(np.dot(np.dot(np.atleast_2d(point[:-1]-centroid),
-                                (np.linalg.inv(covariance))), ((np.atleast_2d(point[:-1]-centroid)).T)))
+    diff = np.atleast_2d(point[:-1]-centroid)
+    expon = -1/2 * \
+        (np.dot(np.dot(diff, (np.linalg.inv(covariance))), ((diff).T)))
 
-    return (expon + np.log(denom))
+    # return expon + np.log(denom)
+    return denom*np.exp(expon)
 
 
 if __name__ == "__main__":
