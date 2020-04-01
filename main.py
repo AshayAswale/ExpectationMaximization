@@ -28,7 +28,7 @@ plotPoints.counter = 0
 
 
 def main(argv):
-    points = genfromtxt(argv[0], delimiter=" ")
+    points = genfromtxt(argv[0], delimiter=",")
 
     # If the n_clust is 0, range of clusters to be checked
     clusts_list = [1, 20]
