@@ -64,32 +64,20 @@ def expectationMaximisation(points, means, covariances):
     start_time = time.time()
     elapsed_time = time.time() - start_time
     i = 0
-    # while elapsed_time < 10:
-    while i < 10:
-        likelihood = getLikelihood(points, means, covariances, p_centroid)
-        print(likelihood)
-        p_x_cl_arr = getGaussianProbArray(points, means, covariances)
+    while elapsed_time < 10:
+        # while i < 2:
+        p_x_cl_arr, likelihood = getGaussianProbArray(
+            points, means, covariances, p_centroid)
+        # print(likelihood)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
         assignClusters(cl_i_array, points)
-        # print(cl_i_array)
         updateCentroids(points, means, covariances)
         elapsed_time = time.time() - start_time
         i += 1
         # print(i)
-        plotPoints(points, means, init_centroids, i)
+        # plotPoints(points, means, init_centroids, i)
     print(i)
     print(means)
-
-
-def getLikelihood(points, means, covariances, p_centroid):
-    likelihood = 0
-    for i in range(len(points)):
-        temp = 0
-        for j in range(len(means)):
-            temp += (p_centroid[j]) * getGaussianProb(
-                points[i], means[j], covariances[j])
-        likelihood += np.log(temp)
-    return likelihood
 
 
 def assignClusters(cl_i_array, points):
@@ -131,13 +119,18 @@ def getProbOfBelonging(p_x_cl_arr, p_centroid):
     return p_x_cl_arr
 
 
-def getGaussianProbArray(points, means, covariances):
-    probabilities = np.zeros((len(points), len(means)))
+def getGaussianProbArray(points, means, covariances, p_centroid):
+    likelihood = 0
+    p_x_cl_arr = np.zeros((len(points), len(means)))
     for i in range(len(points)):
+        temp = 0
         for j in range(len(means)):
-            probabilities[i, j] = getGaussianProb(
+            gaus = getGaussianProb(
                 points[i], means[j], covariances[j])
-    return probabilities
+            p_x_cl_arr[i, j] = gaus
+            temp += (p_centroid[j]) * gaus
+        likelihood += np.log(temp)
+    return p_x_cl_arr, likelihood
 
 
 def getGaussianProb(point, centroid, covariance):
@@ -149,7 +142,7 @@ def getGaussianProb(point, centroid, covariance):
         (np.dot(np.dot(diff, (np.linalg.inv(covariance))), ((diff).T)))
 
     # return expon + np.log(denom)
-    return denom*np.exp(expon)
+    return denom*math.exp(expon)
 
 
 if __name__ == "__main__":
