@@ -11,17 +11,20 @@ import math
 import time
 
 
-def plotPoints(points, means, init_centroids, num=1):
+def plotPoints(points, means):
     pyplot.scatter(points[:, 0], points[:, 1], c=points[:, 2], s=2)
     for i in range(len(means)):
         pyplot.scatter(means[i, 0], means[i, 1], c=i, marker="*", s=90)
-        pyplot.scatter(init_centroids[i, 0], init_centroids[i, 1], c=4)
     # pyplot.show()
     name = 'EM_animation_3/books_read_'
-    save_name = name + str(num) + '.png'
+    save_name = name + str(plotPoints.counter) + '.png'
     print(save_name)
     pyplot.savefig(save_name)
     pyplot.close()
+    plotPoints.counter += 1
+
+
+plotPoints.counter = 0
 
 
 def main(argv):
@@ -36,53 +39,78 @@ def main(argv):
 
 def solve(points, n_clust):
     points_dimension = len(points[0])
-
     # Append a row of zeros.
     temp = np.zeros((len(points), points_dimension + 1))
     temp[:, :-1] = points
     points = temp
-
-    # Centroid with n-dimention and variance
-    # means[ith centroid][x-cord, y-cord, std devn]
+    solve.start_time = time.time()
+    solve.threshold = 10
+    elapsed_time = time.time() - solve.start_time
+    best_clusters = deepcopy(points)
     means = np.zeros((n_clust, points_dimension))
-    for i in range(n_clust):
-        means[i] = random.choice(points[:, :-1])
-
-    # Should be random symmetric matrix
     covariances = np.zeros((n_clust, points_dimension, points_dimension))
-    for i in range(n_clust):
-        covariances[i] = np.identity(points_dimension)
+    best_means = deepcopy(means)
+    best_ll = -math.inf
+    while elapsed_time < 10:
 
-    # means = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
+        # Centroid with n-dimention and variance
+        # means[ith centroid][x-cord, y-cord, std devn]
+        means.fill(0)
+        for i in range(n_clust):
+            means[i] = random.choice(points[:, :-1])
 
-    expectationMaximisation(points, means, covariances)
+        # Should be random symmetric matrix
+        covariances.fill(0)
+        for i in range(n_clust):
+            covariances[i] = np.identity(points_dimension)
+
+        # means = np.array([[20, 70, 5], [15, -10, 5], [-30, 15, 5]])
+        new_ll = expectationMaximisation(
+            points, means, covariances)
+        elapsed_time = time.time() - solve.start_time
+        if new_ll > best_ll:
+            best_clusters = deepcopy(points)
+            best_means = deepcopy(means)
+            print("Best Updated from ", best_ll, " to ", new_ll)
+            best_ll = new_ll
+    plotPoints(best_clusters, best_means)
+    print("Best LL:", best_ll)
 
 
 def expectationMaximisation(points, means, covariances):
     p_centroid = np.full((len(means)), 1 / (len(means)))
-    init_centroids = deepcopy(means)
-    start_time = time.time()
-    elapsed_time = time.time() - start_time
-    i = 0
-    while elapsed_time < 10:
-        # while i < 2:
-        p_x_cl_arr, likelihood = getGaussianProbArray(
+    elapsed_time = time.time() - solve.start_time
+    prev_ll = math.inf
+    curr_ll = 0
+    print("############")
+    while elapsed_time < 10 and abs(curr_ll - prev_ll) > solve.threshold:
+        prev_ll = curr_ll
+        p_x_cl_arr, curr_ll = getGaussianProbArray(
             points, means, covariances, p_centroid)
-        # print(likelihood)
+        print(curr_ll)
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
         assignClusters(cl_i_array, points)
         updateCentroids(points, means, covariances)
-        elapsed_time = time.time() - start_time
-        i += 1
-        # print(i)
-        # plotPoints(points, means, init_centroids, i)
-    print(i)
+        elapsed_time = time.time() - solve.start_time
+        plotPoints(points, means)
     print(means)
+    return curr_ll
 
 
 def assignClusters(cl_i_array, points):
     for i in range(len(cl_i_array)):
         points[i, -1] = np.argmax(cl_i_array[i])
+
+
+def getLikelihood(points, means, covariances, p_centroid):
+    likelihood = 0
+    for i in range(len(points)):
+        temp = 0
+        for j in range(len(means)):
+            temp += (p_centroid[j]) * getGaussianProb(
+                points[i], means[j], covariances[j])
+        likelihood += np.log(temp)
+    return likelihood
 
 
 def updateCentroids(points, means, covariances):
@@ -100,8 +128,12 @@ def updateCentroids(points, means, covariances):
         covariances[cluster] += np.dot(diff.T, diff)
 
     for i in range(len(means)):
-        means[i] /= sums[i]
-        covariances[i] /= sums[i]
+        if sums[i] is not 0:
+            means[i] /= sums[i]
+            covariances[i] /= sums[i]
+        else:
+            means[i] = random.choice(points[:, :-1])
+            covariances[i] = np.identity(len(points[0])-1)
 
     i = 0
 
