@@ -113,8 +113,9 @@ def solve(points, n_clust, runtime):
 
         # Keeping Track of time
         elapsed_time = time.time() - solve.start_time
-        solve.counter += 1
+        # solve.counter += 1
     # plotPoints(best_clusters, best_means)
+    # print(solve.counter)
     return getBIC(len(points), len(means), best_ll), best_ll, best_means, best_covariance
 
 
@@ -143,14 +144,18 @@ def expectationMaximisation(points, means, covariances, runtime):
         # Normalize the probability
         cl_i_array = getProbOfBelonging(p_x_cl_arr, p_centroid)
 
-        # Assigning clustes
-        assignClusters(cl_i_array, points)
-
         # Updating the Cluster Centers
-        updateCentroids(points, means, covariances)
+        updateCentroids(points, means, covariances, cl_i_array)
 
         # Keeping track of time
         elapsed_time = time.time() - solve.start_time
+
+        solve.counter += 1
+        # plotPoints(points, means)
+
+    # Assigning clustes
+    assignClusters(cl_i_array, points)
+
     return curr_ll
 
 
@@ -170,37 +175,46 @@ def getLikelihood(points, means, covariances, p_centroid):
     return likelihood
 
 
-def updateCentroids(points, means, covariances):
+def updateCentroids(points, means, covariances, cl_i_array):
     sums = np.zeros(len(means))
     loc_means = deepcopy(means)
     means.fill(0)
     covariances.fill(0)
-    for i in range(len(points)):
-        cluster = int(points[i, -1])
-        sums[cluster] += 1
-        means[cluster] += points[i, :-1]
-        # covariances[cluster] += np.dot(np.atleast_2d(
-        #     points[i, :-1] - loc_means[i]).T, (points[i, :-1] - loc_means[i]))
-        diff = np.atleast_2d(points[i, :-1] - loc_means[cluster])
-        covariances[cluster] += np.dot(diff.T, diff)
 
+    # Means Update
+    for i in range(len(points)):
+        for j in range(len(means)):
+            # cluster = int(points[i, -1])
+            sums[j] += cl_i_array[i, j]
+            means[j] += points[i, :-1]*cl_i_array[i, j]
     for i in range(len(means)):
         if sums[i] is not 0:
             means[i] /= sums[i]
-            covariances[i] /= sums[i]
         else:
             means[i] = random.choice(points[:, :-1])
+
+    # Covariance Update
+    for i in range(len(points)):
+        for j in range(len(means)):
+            diff = np.atleast_2d(points[i, :-1] - means[j])
+            covariances[j] += np.dot(diff.T, diff)*cl_i_array[i, j]
+    for i in range(len(means)):
+        if sums[i] is not 0:
+            covariances[i] /= sums[i]
+        else:
             covariances[i] = np.identity(len(points[0])-1)
 
-    i = 0
 
-
+# Normalization of probabilities
 def getProbOfBelonging(p_x_cl_arr, p_centroid):
     for point in p_x_cl_arr:
         sum = 0
         for i in range(len(point)):
             sum += point[i] * p_centroid[i]
             point[i] *= p_centroid[i]
+
+        # If the sum is zero, it means the point is too far away from all the clusters.
+        # Hence its probability of being in all the clusters will be the same.
         if sum == 0.0:
             point[:] = 1/len(p_centroid)
         else:
