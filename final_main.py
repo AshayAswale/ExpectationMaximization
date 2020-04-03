@@ -6,27 +6,45 @@ from copy import deepcopy
 from numpy import genfromtxt
 from scipy import linalg
 from em_final import EM
-# from scipy.spatial import distance
-# from matplotlib import pyplot
 import math
 import time
+import csv
 
+# FUNCTION TO GENERATE RANDOM DATA
 def generate_random_pts(noc):
     dimension=2
     m=[]
     c=[]
+    clust=np.zeros(((25-noc)*20*noc,dimension+1))
     for i in range(noc):
         if(i>0):
             mean=mean+np.random.randint(1,5)
             pts=np.vstack((pts,np.random.multivariate_normal(mean,covariance,(25-noc)*20)))
+            clust[:(25-noc)*20*(i+1),:-1]=pts
+            clust[(25-noc)*20*i:(25-noc)*20*(i+1),-1]=i+1
         else:
             mean=np.random.rand(dimension)*np.random.randint(100,size=dimension)
             rm=mean
             covariance=np.diag(np.random.rand(dimension)*np.random.randint(10,size=dimension))
             pts=np.random.multivariate_normal(mean,covariance,(25-noc)*20)
+            clust[:(25-noc)*20,:-1]=pts
+            clust[:(25-noc)*20,-1]=i+1
         m.append(mean)
         c.append(covariance)
+        #GENERATING TEST DATA FILE
+        # file_name="test4.csv"
+        # with open(file_name, 'w') as csvfile: 
+        # # creating a csv writer object 
+        #     csvwriter = csv.writer(csvfile) 
+        #     csvwriter.writerow(["x","y","Cluster"])  
+        #     # writing the data rows 
+        #     csvwriter.writerows(clust)
+        #     csvwriter.writerow(["Means"])
+        #     csvwriter.writerows(m)
+        #     csvwriter.writerow(["Covariance"])
+        #     csvwriter.writerows(c)
     print("Original Data Means:\n",np.asarray(m),"\n")
+    print("Original Data Covariance:\n",np.asarray(c),"\n")
     return pts
 
 
@@ -34,8 +52,8 @@ def main(argv):
     # STORING GIVEN POINTS
     points = genfromtxt(argv[0], delimiter=" ")
     
-    # points=generate_random_pts(10)
-    # print(len(points))
+    # USING RANDOMLY GENERATED POINTS
+    #points=generate_random_pts(15)
 
     # INITIALIZING PARAMETERS
     best_means=[]
@@ -84,6 +102,7 @@ def main(argv):
                 test.M_step(e) # Maximizing the cluster estimates
                 # print(ll)
             if ll>c_ll: # Prioritizing best cluster estimates
+                clusters=test.assign_clusters(e) #ASSIGNING CLUSTERS
                 c_ll=ll
                 c_m=deepcopy(test.means)
                 c_c=deepcopy(test.cov)
@@ -93,6 +112,7 @@ def main(argv):
 
         # PRIORITIZING CLUSTER WITH BEST BIC INDEX
         if bic<best_bic:
+            best_clusters=clusters
             best_bic=bic
             best_ll=c_ll
             best_means=c_m
@@ -110,7 +130,19 @@ def main(argv):
     print("\nBest Covariance:\n",best_cov)
     print("\nEnd-Time: %0.2f"%(time.time()-prog_start_time))
 
-
+    
+    #CHECKING CLUSTER ASSIGNMENT
+    # file_name="result11.csv"
+    # with open(file_name, 'w') as csvfile: 
+    #     # creating a csv writer object 
+    #     csvwriter = csv.writer(csvfile) 
+    #     csvwriter.writerow(["x","y"])  
+    #     # writing the data rows 
+    #     csvwriter.writerows(best_clusters)
+    #     csvwriter.writerow(["Means"])
+    #     csvwriter.writerows(best_means)
+    #     csvwriter.writerow(["Covariance"])
+    #     csvwriter.writerows(best_cov)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

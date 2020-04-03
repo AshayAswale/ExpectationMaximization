@@ -50,6 +50,14 @@ class EM:
     def BIC(self,ll):
         return self.k*math.log(self.n)-2*ll
 
+    def assign_clusters(self,e):
+        temp=np.zeros((self.n,self.dimensions+1))
+        temp[:, :-1] = np.asarray(self.points)
+        for i in range(self.n):
+            temp[i,-1]=np.argmax(e.T[i])+1
+        return temp
+
+
  
 
 
