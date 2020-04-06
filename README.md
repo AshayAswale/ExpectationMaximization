@@ -3,4 +3,4 @@
    
    Final_em file has functions defined for the program
    
-      Run the program using final_main.py sample.txt #clusters
+      Run the program using python3 final_main.py sample.txt #clusters
